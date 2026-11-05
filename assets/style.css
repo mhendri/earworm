@@ -338,6 +338,21 @@ select option { color: #000; }
 }
 .output-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 
+.token-box { margin: 8px 0 22px; padding: 14px 16px; border-radius: 14px; background: rgba(0,0,0,.25); }
+.token-box .add-help { margin: 0; }
+.token-row { display: flex; gap: 10px; margin-top: 12px; }
+.token-row input { flex: 1; min-width: 0; }
+.token-help { margin-top: 12px; color: var(--muted); font-size: .92rem; }
+.token-help summary { cursor: pointer; color: var(--cyan); font-weight: 500; }
+.token-help ol { margin: 10px 0 0; padding-left: 20px; line-height: 1.6; }
+.token-help a { color: var(--yellow); }
+.token-help code { background: rgba(255,255,255,.1); padding: 1px 6px; border-radius: 6px; }
+.linklike { background: none; border: 0; padding: 0; margin-top: 10px; color: var(--muted); text-decoration: underline; cursor: pointer; font: inherit; font-size: .85rem; }
+.save-status { min-height: 1.4em; margin: 14px 0 0; font-weight: 700; }
+.save-status.ok { color: var(--green); }
+.save-status.err { color: var(--orange); }
+.btn[disabled] { opacity: .6; cursor: wait; transform: none; }
+
 /* ---------- footer ---------- */
 .site-footer { text-align: center; color: var(--muted); padding: 24px 16px 40px; }
 
@@ -353,6 +368,7 @@ select option { color: #000; }
   .add-form { grid-template-columns: 1fr; }
   .cards { grid-template-columns: 1fr; }
   #search { width: 100%; }
+  .token-row { flex-direction: column; }
   .controls { width: 100%; }
 }
 

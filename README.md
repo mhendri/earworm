@@ -18,7 +18,13 @@ All data lives in **`earworms.csv`**:
 
 Wrap a field in double quotes if it contains a comma, for example `"Daisy, Daisy"`. Row order doesn't matter because the site sorts by date.
 
-You can also use the **Log a new earworm** form at the bottom of the site. It builds the CSV line for you and links to the GitHub editor for `earworms.csv`.
+### Adding from the site
+
+The add form is hidden from visitors. Open the site with `?add` on the end, for example `https://mhendri.github.io/earworm/?add`, and bookmark that link on your phone.
+
+The first time, the form asks for a **GitHub fine-grained token**. Instructions are on the page. Give the token access to this repo only, with **Contents: Read and write**. The token is saved only in that browser's local storage. After that, **Save earworm** commits the new row to `earworms.csv` for you, and GitHub Pages redeploys on its own in about a minute.
+
+Without a token, the form just builds a CSV line for you to paste in by hand.
 
 The starter rows are public-domain examples. Delete them once you've added your own.
 

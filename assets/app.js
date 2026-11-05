@@ -215,6 +215,13 @@
   }
 
   // ---------- add form ----------
+  const TOKEN_KEY = "earworm-gh-token";
+  const store = {
+    get() { try { return localStorage.getItem(TOKEN_KEY) || ""; } catch (_) { return ""; } },
+    set(v) { try { localStorage.setItem(TOKEN_KEY, v); } catch (_) {} },
+    clear() { try { localStorage.removeItem(TOKEN_KEY); } catch (_) {} },
+  };
+
   function repoInfo() {
     const host = location.hostname;
     if (host.endsWith(".github.io")) {
@@ -226,20 +233,154 @@
     return FALLBACK_REPO;
   }
 
-  function setupForm() {
-    const form = $("#add-form");
-    const today = new Date();
-    form.date.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const b64ToText = (b64) =>
+    new TextDecoder().decode(Uint8Array.from(atob(b64.replace(/\s/g, "")), (c) => c.charCodeAt(0)));
+  const textToB64 = (text) => {
+    let bin = "";
+    new TextEncoder().encode(text).forEach((byte) => (bin += String.fromCharCode(byte)));
+    return btoa(bin);
+  };
 
+  async function gh(path, token, opts = {}) {
+    const res = await fetch(`https://api.github.com${path}`, {
+      ...opts,
+      cache: "no-store",
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+        ...(opts.headers || {}),
+      },
+    });
+    if (!res.ok) {
+      let msg = `GitHub said ${res.status}`;
+      try { msg += `: ${(await res.json()).message}`; } catch (_) {}
+      const err = new Error(msg);
+      err.status = res.status;
+      throw err;
+    }
+    return res.json();
+  }
+
+  async function fetchCsvFromGitHub(token) {
+    const { owner, repo, branch } = repoInfo();
+    const file = await gh(`/repos/${owner}/${repo}/contents/${CSV_PATH}?ref=${branch}`, token);
+    return { text: b64ToText(file.content), sha: file.sha };
+  }
+
+  // Insert the new row right under the header and commit it. Retries once on a stale sha.
+  async function commitEntry(entry, token) {
+    const { owner, repo, branch } = repoInfo();
+    const line = COLUMNS.map((c) => toCSVField(entry[c])).join(",");
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const { text, sha } = await fetchCsvFromGitHub(token);
+      const nl = text.indexOf("\n");
+      const updated = nl === -1
+        ? `${text.trimEnd() || COLUMNS.join(",")}\n${line}\n`
+        : `${text.slice(0, nl + 1)}${line}\n${text.slice(nl + 1)}`;
+      try {
+        return await gh(`/repos/${owner}/${repo}/contents/${CSV_PATH}`, token, {
+          method: "PUT",
+          body: JSON.stringify({
+            message: `Add earworm: ${entry.song}${entry.artist ? ` by ${entry.artist}` : ""}`,
+            content: textToB64(updated),
+            sha,
+            branch,
+          }),
+        });
+      } catch (err) {
+        if (err.status !== 409 || attempt === 1) throw err;
+      }
+    }
+  }
+
+  function setupForm() {
+    const section = $("#add");
+    const params = new URLSearchParams(location.search);
+    if (!params.has("add") && location.hash !== "#add") return;
+    section.classList.remove("hidden");
+
+    const form = $("#add-form");
     const { owner, repo, branch } = repoInfo();
     $("#edit-link").href = `https://github.com/${owner}/${repo}/edit/${branch}/${CSV_PATH}`;
+    $("#token-repo").textContent = `${owner}/${repo}`;
 
-    form.addEventListener("submit", (e) => {
+    const resetDate = () => {
+      const t = new Date();
+      form.date.value = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+    };
+    resetDate();
+
+    const status = (msg, kind = "") => {
+      const s = $("#save-status");
+      s.textContent = msg;
+      s.className = `save-status ${kind}`;
+    };
+
+    const refreshTokenUI = () => {
+      const has = !!store.get();
+      $("#token-status").textContent = has
+        ? "🔑 Connected. Saving commits straight to earworms.csv and the live site updates in about a minute."
+        : "🔒 Paste a GitHub token once on this device so this form can save for you. Without one, it'll just generate a CSV line to paste in by hand.";
+      $("#token-setup").classList.toggle("hidden", has);
+      $("#token-help").classList.toggle("hidden", has);
+      $("#token-forget").classList.toggle("hidden", !has);
+      $("#submit-btn").textContent = has ? "🐛 Save earworm" : "Generate CSV line";
+    };
+    refreshTokenUI();
+
+    $("#token-save").addEventListener("click", async () => {
+      const token = $("#token-input").value.trim();
+      if (!token) return;
+      status("Checking token…");
+      try {
+        await fetchCsvFromGitHub(token);
+        store.set(token);
+        $("#token-input").value = "";
+        status("Token works! You're all set.", "ok");
+        refreshTokenUI();
+      } catch (err) {
+        status(`That token didn't work (${err.message}).`, "err");
+      }
+    });
+
+    $("#token-forget").addEventListener("click", () => {
+      store.clear();
+      status("Token removed from this device.");
+      refreshTokenUI();
+    });
+
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const data = new FormData(form);
-      const line = COLUMNS.map((c) => toCSVField((data.get(c) || "").toString().trim())).join(",");
-      $("#csv-line").textContent = line;
-      $("#output").classList.remove("hidden");
+      const entry = Object.fromEntries(COLUMNS.map((c) => [c, (data.get(c) || "").toString().trim()]));
+      const token = store.get();
+
+      if (!token) {
+        $("#csv-line").textContent = COLUMNS.map((c) => toCSVField(entry[c])).join(",");
+        $("#output").classList.remove("hidden");
+        return;
+      }
+
+      const btn = $("#submit-btn");
+      btn.disabled = true;
+      status("Saving to GitHub…");
+      try {
+        await commitEntry(entry, token);
+        all.unshift(entry); // newest first so it wins same-day ties (matches CSV order)
+        sortAll();
+        renderAll();
+        showNow(all[0]);
+        form.reset();
+        resetDate();
+        status(`Saved “${entry.song}”! 🎉 The live site will catch up in a minute or so.`, "ok");
+        $("#now").scrollIntoView({ behavior: "smooth" });
+      } catch (err) {
+        if (err.status === 401) { store.clear(); refreshTokenUI(); }
+        status(`Couldn't save: ${err.message}`, "err");
+      } finally {
+        btn.disabled = false;
+      }
     });
 
     $("#copy").addEventListener("click", async () => {
@@ -272,38 +413,37 @@
   }
 
   // ---------- boot ----------
+  function sortAll() {
+    all.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  }
+
+  function renderAll() {
+    renderStats();
+    renderCards();
+  }
+
+  async function loadCsvText() {
+    // With a token, read straight from GitHub so fresh saves show up before Pages redeploys.
+    const token = store.get();
+    if (token) {
+      try { return (await fetchCsvFromGitHub(token)).text; } catch (err) { console.warn(err); }
+    }
+    const res = await fetch(CSV_PATH, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.text();
+  }
+
   async function init() {
     spawnNotes();
     setupForm();
     $("#now-lyric").classList.add("loading");
 
-    try {
-      const res = await fetch(CSV_PATH, { cache: "no-store" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      all = parseCSV(await res.text())
-        .filter((w) => w.song || w.lyric)
-        .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-    } catch (err) {
-      console.error(err);
-      $("#now-lyric").textContent = "Couldn't load earworms.csv. (If you opened this file directly, run a local server.)";
-      return;
-    }
-
-    if (!all.length) {
-      $("#now-lyric").textContent = "Silence… for now. Add your first earworm below!";
-      renderStats();
-      return;
-    }
-
-    showNow(all[0]);
-    renderStats();
-    renderCards();
-
     $("#shuffle").addEventListener("click", () => {
+      if (!all.length) return;
       const pool = all.length > 1 ? all.slice(1) : all;
       showNow(pool[Math.floor(Math.random() * pool.length)], { shuffled: all.length > 1 });
     });
-    $("#back-latest").addEventListener("click", () => showNow(all[0]));
+    $("#back-latest").addEventListener("click", () => all.length && showNow(all[0]));
     $("#search").addEventListener("input", (e) => { query = e.target.value.trim(); renderCards(); });
     document.querySelectorAll(".chip").forEach((chip) =>
       chip.addEventListener("click", () => {
@@ -312,6 +452,19 @@
         renderCards();
       })
     );
+
+    try {
+      all = parseCSV(await loadCsvText()).filter((w) => w.song || w.lyric);
+      sortAll();
+    } catch (err) {
+      console.error(err);
+      $("#now-lyric").textContent = "Couldn't load earworms.csv. (If you opened this file directly, run a local server.)";
+      return;
+    }
+
+    renderAll();
+    if (all.length) showNow(all[0]);
+    else $("#now-lyric").textContent = "Silence… for now. Add your first earworm!";
   }
 
   init();

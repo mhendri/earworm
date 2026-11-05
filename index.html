@@ -78,11 +78,29 @@
       <p class="empty hidden" id="empty">No worms match that. Your brain is suspiciously quiet.</p>
     </section>
 
-    <!-- Add -->
-    <section class="add" id="add">
+    <!-- Add (only shown with ?add in the URL) -->
+    <section class="add hidden" id="add">
       <h2 class="section-title">Log a new earworm</h2>
-      <p class="add-help">Fill this in, copy the generated line, and paste it on a new line right under the header in
-        <code>earworms.csv</code>. Commit, and the site updates in a minute or so.</p>
+
+      <div class="token-box">
+        <p class="add-help" id="token-status"></p>
+        <div class="token-row hidden" id="token-setup">
+          <input type="password" id="token-input" placeholder="github_pat_…" autocomplete="off" aria-label="GitHub token">
+          <button class="btn btn-ghost" id="token-save" type="button">Save token</button>
+        </div>
+        <details class="token-help" id="token-help">
+          <summary>How do I get a token?</summary>
+          <ol>
+            <li>Open <a id="token-link" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub → new fine-grained token</a>.</li>
+            <li>Give it a name (e.g. “Earworm Log”) and pick an expiration.</li>
+            <li><b>Repository access:</b> Only select repositories → <code id="token-repo">earworm</code>.</li>
+            <li><b>Permissions → Repository → Contents:</b> Read and write.</li>
+            <li>Generate, copy, paste it above. It is stored only in this browser.</li>
+          </ol>
+        </details>
+        <button class="linklike hidden" id="token-forget" type="button">Forget token on this device</button>
+      </div>
+
       <form id="add-form" class="add-form">
         <label>Date <input type="date" name="date" required></label>
         <label>Song <input type="text" name="song" required placeholder="Song title"></label>
@@ -96,8 +114,10 @@
           </select>
         </label>
         <label>Notes <input type="text" name="notes" placeholder="Where'd it come from?"></label>
-        <button class="btn btn-play wide" type="submit">Generate CSV line</button>
+        <button class="btn btn-play wide" type="submit" id="submit-btn">🐛 Save earworm</button>
       </form>
+      <p class="save-status" id="save-status" role="status"></p>
+
       <div class="output hidden" id="output">
         <pre id="csv-line"></pre>
         <div class="output-actions">
