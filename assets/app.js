@@ -113,6 +113,7 @@
     const embed = $("#embed");
     embed.innerHTML = "";
     embed.classList.add("hidden");
+    $("#now").classList.remove("playing");
     play.href = playUrl(w);
     play.textContent = id ? "▶ Play it here" : "▶ Find it on YouTube";
     play.onclick = id
@@ -126,6 +127,7 @@
             allowfullscreen: "",
           }));
           embed.classList.remove("hidden");
+          $("#now").classList.add("playing");
         }
       : null;
   }
@@ -437,6 +439,9 @@
     spawnNotes();
     setupForm();
     $("#now-lyric").classList.add("loading");
+
+    // The record is a big play button: plays in-page for real video links, otherwise opens YouTube.
+    $("#vinyl-btn").addEventListener("click", () => all.length && $("#now-play").click());
 
     $("#shuffle").addEventListener("click", () => {
       if (!all.length) return;
