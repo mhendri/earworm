@@ -182,7 +182,7 @@
       const id = youtubeId(w.youtube_url);
       const top = id
         ? el("a", { class: "card-thumb", href: playUrl(w), target: "_blank", rel: "noopener", "aria-label": `Play ${w.song}` },
-            el("img", { src: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`, alt: "", loading: "lazy" }),
+            el("img", { src: `https://i.ytimg.com/vi/${id}/mqdefault.jpg`, alt: "", loading: "lazy" }),
             el("span", { class: "play-dot", text: "▶" }))
         : el("div", { class: "card-strip" });
 
