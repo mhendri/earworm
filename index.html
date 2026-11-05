@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Earworm Log</title>
+  <meta name="description" content="A running log of every song stuck in my head.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐛</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Bungee+Shade&family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="bg-notes" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <div class="worm" aria-hidden="true">
+      <span></span><span></span><span></span><span></span><span></span><span></span>
+      <span class="head"><i class="eye"></i><i class="eye"></i><b class="phones"></b></span>
+    </div>
+    <h1 class="logo">Earworm<span>Log</span></h1>
+    <p class="tagline">Every song that moved into my head rent-free.</p>
+  </header>
+
+  <main>
+    <!-- Now playing (latest or shuffled) -->
+    <section class="now" id="now" aria-live="polite">
+      <div class="now-label">
+        <span class="pulse"></span>
+        <span id="now-kicker">Currently stuck in my head</span>
+      </div>
+      <div class="now-grid">
+        <div class="vinyl-wrap">
+          <div class="vinyl" id="vinyl">
+            <div class="vinyl-label" id="vinyl-label"></div>
+          </div>
+          <div class="tonearm"></div>
+        </div>
+        <div class="now-body">
+          <blockquote class="lyric" id="now-lyric">Loading the jukebox…</blockquote>
+          <div class="now-meta">
+            <h2 id="now-song"></h2>
+            <p id="now-artist"></p>
+            <div class="now-tags">
+              <span class="badge" id="now-type"></span>
+              <span class="date" id="now-date"></span>
+            </div>
+            <p class="notes" id="now-notes"></p>
+          </div>
+          <div class="now-actions">
+            <a class="btn btn-play" id="now-play" href="#" target="_blank" rel="noopener">▶ Play on YouTube</a>
+            <button class="btn btn-ghost" id="shuffle" type="button">🔀 Shuffle a past worm</button>
+            <button class="btn btn-ghost hidden" id="back-latest" type="button">⏮ Back to latest</button>
+          </div>
+          <div class="embed hidden" id="embed"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats -->
+    <section class="stats" id="stats" aria-label="Earworm stats"></section>
+
+    <!-- History -->
+    <section class="history">
+      <div class="history-head">
+        <h2 class="section-title">The Worm Archive</h2>
+        <div class="controls">
+          <input type="search" id="search" placeholder="Search songs, artists, lyrics…" aria-label="Search earworms">
+          <div class="chips" role="group" aria-label="Filter by type">
+            <button class="chip active" data-filter="all" type="button">All</button>
+            <button class="chip" data-filter="wakeup" type="button">☀️ Woke up with it</button>
+            <button class="chip" data-filter="stuck" type="button">🌀 Stuck all day</button>
+          </div>
+        </div>
+      </div>
+      <ol class="cards" id="cards"></ol>
+      <p class="empty hidden" id="empty">No worms match that. Your brain is suspiciously quiet.</p>
+    </section>
+
+    <!-- Add -->
+    <section class="add" id="add">
+      <h2 class="section-title">Log a new earworm</h2>
+      <p class="add-help">Fill this in, copy the generated line, and paste it on a new line right under the header in
+        <code>earworms.csv</code>. Commit, and the site updates in a minute or so.</p>
+      <form id="add-form" class="add-form">
+        <label>Date <input type="date" name="date" required></label>
+        <label>Song <input type="text" name="song" required placeholder="Song title"></label>
+        <label>Artist <input type="text" name="artist" placeholder="Who sings it"></label>
+        <label class="wide">The lyric looping in your head <input type="text" name="lyric" required placeholder="The line that won't leave"></label>
+        <label class="wide">YouTube link <input type="url" name="youtube_url" placeholder="https://www.youtube.com/watch?v=…"></label>
+        <label>Type
+          <select name="type">
+            <option value="wakeup">☀️ Woke up with it</option>
+            <option value="stuck">🌀 Stuck all day</option>
+          </select>
+        </label>
+        <label>Notes <input type="text" name="notes" placeholder="Where'd it come from?"></label>
+        <button class="btn btn-play wide" type="submit">Generate CSV line</button>
+      </form>
+      <div class="output hidden" id="output">
+        <pre id="csv-line"></pre>
+        <div class="output-actions">
+          <button class="btn btn-ghost" id="copy" type="button">📋 Copy</button>
+          <a class="btn btn-ghost" id="edit-link" href="#" target="_blank" rel="noopener">✏️ Open earworms.csv on GitHub</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Made with an unshakeable chorus · <span id="count-foot"></span></p>
+  </footer>
+
+  <script src="assets/app.js"></script>
+</body>
+</html>
